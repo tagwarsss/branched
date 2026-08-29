@@ -81,19 +81,27 @@
 
   <section class="section section-about" data-section="about">
     <div class="about-content">
-      <h2>About</h2>
-      <p>This is the about section.</p>
+      <div class="paper" id="paperMessages">
+        <div class="paper-lines"></div>
+        <div class="paper-content" id="messagesList"></div>
+      </div>
     </div>
   </section>
 
   <nav class="nav-bar" aria-label="Sections">
     <button class="nav-item active" data-value="home">Home</button>
     <button class="nav-item" data-value="gallery">Gallery</button>
-    <button class="nav-item" data-value="about">About</button>
   </nav>
 
-  <button class="envelope-btn" aria-label="Chat">✉️</button>
-  <div class="chat-panel" id="chatPanel">
+  <button class="envelope-btn" aria-label="Chat">
+    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="2" y="4" width="20" height="16" rx="2" stroke="currentColor" stroke-width="1.5"/>
+      <g class="envelope-flap">
+        <path d="M2 6L12 13L22 6" stroke="currentColor" stroke-width="1.5"/>
+      </g>
+    </svg>
+  </button>
+   <div class="chat-panel" id="chatPanel">
     <div class="chat-header">
       <span>Messages</span>
       <button class="chat-close" aria-label="Close chat">×</button>
@@ -104,7 +112,7 @@
       <div class="chat-input-area">
         <div class="chat-input-wrapper">
           <textarea class="chat-input" id="chatInput" placeholder="Type a message..." rows="7"></textarea>
-          <div class="chat-word-count" id="wordCount">0/12</div>
+          <div class="chat-word-count" id="wordCount">0/3</div>
         </div>
         <button type="submit" class="chat-send">Send</button>
       </div>

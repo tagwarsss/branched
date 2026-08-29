@@ -8,10 +8,21 @@
   font-display: swap;
 }
 
-html, body {
+@font-face {
+  font-family: "Stampwriter Kit";
+  src: url('./stampwriter-kit/STAMPWRITER-KIT.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+html,
+body {
+  width: 100%;
   height: 100%;
   margin: 0;
   padding: 0;
+  overflow: hidden;
 }
 
 body {
@@ -22,8 +33,8 @@ body {
   background: #000;
   color: #eee;
   font-family: "Special Elite", cursive;
-  overflow: hidden;
 }
+
 
 /* ---- Center text (Kiya Hand Write) ---- */
 .txt {
@@ -72,35 +83,46 @@ body {
   }
 }
 
+@keyframes galleryFadeIn {
+  from {
+    opacity: 0;
+    transform: translate(0, 0) scale(0.9);
+  }
+  to {
+    opacity: 1;
+  }
+}
 /* ---- Full-screen background text ---- */
+
 .background {
   position: fixed;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  overflow: hidden;
   z-index: 0;
-  padding: 1.5rem;
+  padding: 0;
+  box-sizing: border-box;
   font-size: 16px;
   line-height: 1.4;
-  font-family: "Kiya Hand Write", cursive;
+  font-family: "Stampwriter Kit", cursive;
   color: #fff;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.8s ease 0.3s;
+  transition: opacity 3.5s ease 0.3s, filter 0.5s ease;
 }
 
 .background.reveal {
   opacity: 0.5;
 }
 
+.background.blur {
+  filter: blur(8px);
+}
+
 .bg-word {
   position: relative;
   display: inline;
-  white-space: normal;
-  overflow-wrap: anywhere;
-  word-break: break-word;
 }
 
 /* ===== Top navigation bar ===== */
@@ -130,7 +152,7 @@ body {
   padding: 0.4rem 0.8rem;
   font-family: inherit;
   font-size: inherit;
-  color: inherit;
+  color: #fff;
   cursor: pointer;
   user-select: none;
   position: relative;
@@ -141,6 +163,7 @@ body {
 }
 .nav-item.active {
   font-weight: bold;
+  animation: navEnter 0.5s ease 0.15s both;
 }
 .nav-item.active::after {
   content: "";
@@ -151,9 +174,34 @@ body {
   height: 2px;
   background: currentColor;
   border-radius: 1px;
+  animation: underlineSlide 0.4s ease 0.35s both;
 }
 .nav-item.inactive {
   opacity: 0.45;
+}
+
+@keyframes navEnter {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes underlineSlide {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+.nav-item.active::after {
+  transform-origin: center;
 }
 
 .sketch {
@@ -169,10 +217,24 @@ body {
   pointer-events: none;
   user-select: none;
   -webkit-user-drag: none;
-  transition: opacity 0.8s ease;
+  transition: opacity 2.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 .sketch.reveal {
-  opacity: 0.9;
+  opacity: 1;
+  animation: sketchFadeIn 3s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.2s both;
+}
+
+@keyframes sketchFadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(20px) scale(0.98);
+    filter: blur(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+    filter: blur(0);
+  }
 }
 
 .section {
@@ -195,37 +257,81 @@ body {
 }
 
 .gallery-grid {
-  position: absolute;
-
-  /* Start at the top-left */
+  position: relative;
   left: 0;
   top: 0;
-
-  width: 2500px;
-  height: 1500px;
-
-  display: grid;
-  grid-template-columns: repeat(10, 1fr);
-  grid-template-rows: repeat(6, 1fr);
-
-  gap: 24px;
-  padding: 20px;
-  box-sizing: border-box;
-
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  background: transparent;
   cursor: default;
   user-select: none;
+  touch-action: none;
+}
 
-  will-change: transform;
+body:has(.nav-item.active[data-value="gallery"]) .gallery-grid {
+  background: transparent;
+}
+
+body:has(.nav-item.active[data-value="gallery"]) {
+  background: #000;
+}
+
+body:has(.nav-item.active[data-value="gallery"]) .background {
+  opacity: 0;
+}
+
+body:has(.nav-item.active[data-value="gallery"]) .sketch {
+  opacity: 0;
+}
+
+ body:has(.nav-item.active[data-value="gallery"]) .envelope-btn {
+  opacity: 0 !important;
+  pointer-events: none !important;
 }
 
 .gallery-item {
+  position: absolute;
+  width: 140px;
+  height: 140px;
   min-width: 0;
   min-height: 0;
 
-  background: #f5f5f5;
-  border: 1px solid rgba(0, 0, 0, 0.12);
+  background: #fff;
+  border: none;
   color: #000;
   overflow: hidden;
+
+  padding: 6px 6px 20px 6px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
+  opacity: 0;
+  transition: opacity 5s ease, box-shadow 0.3s ease;
+  will-change: transform;
+  contain: layout paint;
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+}
+
+.gallery-item:hover {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.7);
+  z-index: 2;
+}
+
+.gallery-item:active {
+  cursor: grabbing;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.75);
+}
+
+/* ---- Delayed fade-out when leaving the gallery (e.g. Home clicked) ---- */
+.section-gallery.leaving {
+  display: flex;
+  pointer-events: none;
+}
+
+.section-gallery.leaving .gallery-item {
+  opacity: 0;
+  transition: opacity 1s ease 1s;
 }
 
 .gallery-item img {
@@ -257,6 +363,137 @@ body {
   color: #fff;
 }
 
+.messages-list {
+  margin-top: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-height: 300px;
+  overflow-y: auto;
+  text-align: left;
+}
+
+.message-item {
+  display: flex;
+  gap: 0.5rem;
+  align-items: baseline;
+}
+
+.message-name {
+  color: #fff;
+  font-weight: bold;
+  font-family: "Special Elite", cursive;
+  font-size: 16px;
+}
+
+.message-name::after {
+  content: ":";
+  margin-right: 0.25rem;
+}
+
+.message-text {
+  color: rgba(255, 255, 255, 0.8);
+  font-family: "Special Elite", cursive;
+  font-size: 16px;
+}
+
+/* ===== Paper with lines ===== */
+.paper {
+  position: relative;
+  width: 100%;
+  max-width: 700px;
+  height: 320px;
+  margin: 2rem auto 0;
+  background: rgba(20, 20, 20, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+  padding: 0 2rem 0 3rem;
+  box-sizing: border-box;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+  will-change: transform;
+}
+
+.paper:active {
+  cursor: grabbing;
+}
+
+.paper::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 2rem;
+  width: 2px;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.3);
+  z-index: 2;
+}
+
+.paper-lines {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: repeating-linear-gradient(
+    transparent,
+    transparent 31px,
+    rgba(255, 255, 255, 0.1) 31px,
+    rgba(255, 255, 255, 0.1) 32px
+  );
+  background-position: 0 0;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.paper-content {
+  position: relative;
+  z-index: 1;
+  height: 100%;
+  overflow: hidden;
+  padding-top: 0;
+}
+
+.messages-list {
+  display: flex;
+  flex-direction: column;
+  will-change: transform;
+}
+
+.message-item {
+  display: flex;
+  gap: 0.5rem;
+  align-items: baseline;
+  height: 32px;
+  line-height: 32px;
+  flex-shrink: 0;
+}
+
+.message-name {
+  color: #fff;
+  font-weight: bold;
+  font-family: "Kiya Hand Write", cursive;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.message-name::after {
+  content: ":";
+  margin-right: 0.25rem;
+}
+
+.message-text {
+  color: rgba(255, 255, 255, 0.7);
+  font-family: "Kiya Hand Write", cursive;
+  font-size: 16px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 /* ===== Envelope + Chat ===== */
 .envelope-btn {
   position: fixed;
@@ -265,17 +502,48 @@ body {
   z-index: 30;
   width: 48px;
   height: 48px;
-  border-radius: 50%;
+  border-radius: 8px;
   border: none;
   background: rgba(255, 255, 255, 0.1);
   color: #fff;
   font-size: 20px;
   cursor: pointer;
   backdrop-filter: blur(8px);
-  transition: background 0.2s;
+  transition: all 0.2s ease-in-out;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px;
+  opacity: 0;
+  pointer-events: none;
+  perspective: 200px;
 }
-.envelope-btn:hover {
-  background: rgba(255, 255, 255, 0.2);
+
+.envelope-btn.reveal {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.envelope-btn svg {
+  width: 100%;
+  height: 100%;
+}
+
+.envelope-btn .envelope-flap {
+  transform-origin: 50% 0%;
+  transform-box: fill-box;
+}
+
+.envelope-btn.active .envelope-flap {
+  transform: none;
+}
+
+.envelope-btn:hover,
+.envelope-btn.active {
+  background: #fff;
+  color: #000;
+  border: none;
+  transform: none;
 }
 
 .chat-panel {
@@ -294,12 +562,49 @@ body {
   opacity: 0;
   pointer-events: none;
   transform: translateY(10px);
+  transform-origin: bottom right;
   transition: opacity 0.25s ease, transform 0.25s ease;
 }
 .chat-panel.open {
   opacity: 1;
   pointer-events: auto;
   transform: translateY(0);
+}
+
+/* ===== Gallery image popup ===== */
+.gallery-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: rgba(0, 0, 0, 0.95);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  opacity: 0;
+  transition: opacity 0.5s ease;
+}
+
+.gallery-overlay.visible {
+  opacity: 1;
+}
+
+.gallery-overlay img {
+  max-width: 90vw;
+  max-height: 90vh;
+  object-fit: contain;
+  pointer-events: none;
+  border-radius: 5%;
+  user-select: none;
+  -webkit-user-drag: none;
+  transform: scale(0.3);
+  transition: transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.gallery-overlay.visible img {
+  transform: scale(1);
 }
 .chat-panel.shake {
   animation: shake 0.4s ease;
@@ -329,7 +634,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  max-height: 280px;
+  max-height: 400px;
 }
 .chat-message {
   background: rgba(255, 255, 255, 0.08);
@@ -345,6 +650,14 @@ body {
 }
 .chat-message.received {
   align-self: flex-start;
+}
+.msg-name {
+  font-weight: bold;
+  color: #fff;
+  margin-right: 0.25rem;
+}
+.msg-text {
+  color: rgba(255, 255, 255, 0.7);
 }
 
 .chat-form {

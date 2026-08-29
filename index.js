@@ -15,7 +15,7 @@ let lastMessageId = 0;
 async function fetchMessages() {
   try {
     const response = await fetch(
-      `${SUPABASE_URL}/rest/v1/messages?select=id,message&order=id.asc`,
+      `${SUPABASE_URL}/rest/v1/messages?select=id,name,message&order=id.asc`,
       {
         method: "GET",
         headers: {
@@ -87,6 +87,8 @@ async function pollMessages() {
       addWordsToBackground(newMessages);
     }
 
+    refreshChatPanel();
+
   } catch (error) {
     console.error("Supabase polling error:", error);
   }
@@ -114,19 +116,30 @@ function addWordsToBackground(words) {
     const fontSize =
       Math.floor(14 + Math.random() * 36);
 
+    const blur = (Math.random() * 2).toFixed(1);
+    let finalOpacity = (0.2 + Math.random() * 0.4).toFixed(2);
+
+    // Center zone: reduce opacity to avoid competing with sketch
+    const centerX = 5 + Math.random() * 90;
+    const centerY = 5 + Math.random() * 90;
+    if (centerX > 30 && centerX < 70 && centerY > 30 && centerY < 70) {
+      finalOpacity = (parseFloat(finalOpacity) * 0.5).toFixed(2);
+    }
+
     span.style.cssText = `
       position:absolute;
-      left:${Math.random() * 100}%;
-      top:${Math.random() * 100}%;
+      left:${centerX}%;
+      top:${centerY}%;
+      transform:translate(-50%,-50%);
       color:#fff;
       font-size:${fontSize}px;
       opacity:0;
-      transition:opacity 0.3s ease;
-      white-space:normal;
-      max-width:300px;
-      overflow-wrap:anywhere;
-      word-break:break-word;
+      filter:blur(${blur}px);
+      transition:opacity 30s ease;
+      white-space:nowrap;
     `;
+
+    span.dataset.finalOpacity = finalOpacity;
 
     span.textContent = msg;
 
@@ -147,11 +160,94 @@ function addWordsToBackground(words) {
     ) {
 
       allWords[i].style.transitionDelay =
-        `${0.3 + (i % 60) * 0.015}s`;
+        `${(i - existingCount) * 2}s`;
 
-      allWords[i].style.opacity = "0.45";
+      allWords[i].style.opacity = allWords[i].dataset.finalOpacity || "0.45";
     }
 
+  });
+
+}
+
+/* ===== Refresh chat panel with all messages ===== */
+
+async function refreshChatPanel(show = false) {
+  const chatMessages = document.getElementById("chatMessages");
+  if (!chatMessages) return;
+
+  chatMessages.innerHTML = "";
+
+  if (!show) return;
+
+  try {
+    const response = await fetch(
+      `${SUPABASE_URL}/rest/v1/messages?select=name,message&order=id.asc`,
+      {
+        method: "GET",
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+          "Content-Type": "application/json"
+        }
+      }
+    );
+
+    if (!response.ok) return;
+
+    const data = await response.json();
+
+    data.forEach((row) => {
+      if (!row.message) return;
+
+      const div = document.createElement("div");
+      div.className = "chat-message received";
+
+      const nameSpan = document.createElement("span");
+      nameSpan.className = "msg-name";
+      nameSpan.textContent = (row.name || "Anonymous") + ":";
+
+      const msgSpan = document.createElement("span");
+      msgSpan.className = "msg-text";
+      msgSpan.textContent = row.message;
+
+      div.appendChild(nameSpan);
+      div.appendChild(msgSpan);
+      chatMessages.appendChild(div);
+    });
+
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+
+  } catch (error) {
+    console.error("refreshChatPanel error:", error);
+  }
+}
+
+
+/* ===== Render messages list in About section ===== */
+
+function renderMessagesList(messages) {
+  const container = document.getElementById("messagesList");
+  if (!container) return;
+
+  container.innerHTML = "";
+
+  messages.forEach((row) => {
+    if (!row.message) return;
+
+    const item = document.createElement("div");
+    item.className = "message-item";
+
+    const name = document.createElement("span");
+    name.className = "message-name";
+    name.textContent = row.name || "Anonymous";
+
+    const msg = document.createElement("span");
+    msg.className = "message-text";
+    msg.textContent = row.message;
+
+    item.appendChild(name);
+    item.appendChild(msg);
+    container.appendChild(item);
   });
 }
 
@@ -161,6 +257,8 @@ function addWordsToBackground(words) {
 (async function init() {
 
   const messages = await fetchMessages();
+
+  renderMessagesList(messages);
 
   /* ---- Display existing messages ---- */
 
@@ -181,21 +279,27 @@ function addWordsToBackground(words) {
       const fontSize =
         Math.floor(14 + Math.random() * 36);
 
+      const blur = (Math.random() * 5).toFixed(1);
+      const finalOpacity = Math.random() < 0.3
+        ? (0.05 + Math.random() * 0.1).toFixed(2)
+        : (0.2 + Math.random() * 0.6).toFixed(2);
+
       span.className = "bg-word";
 
       span.style.cssText = `
         position:absolute;
-        left:${Math.random() * 100}%;
-        top:${Math.random() * 100}%;
+        left:${-5 + Math.random() * 110}%;
+        top:${-5 + Math.random() * 110}%;
+        transform:translate(-50%,-50%);
         color:#fff;
         font-size:${fontSize}px;
         opacity:0;
-        transition:opacity 0.3s ease;
-        white-space:normal;
-        max-width:300px;
-        overflow-wrap:anywhere;
-        word-break:break-word;
-      `;
+        filter:blur(${blur}px);
+        transition:opacity 5s ease;
+      white-space:nowrap;
+    `;
+
+      span.dataset.finalOpacity = finalOpacity;
 
       span.textContent = msg;
 
@@ -211,8 +315,6 @@ function addWordsToBackground(words) {
 
     bg.appendChild(frag);
 
-    bg.classList.add("reveal");
-
     requestAnimationFrame(() => {
 
       const allWords =
@@ -223,7 +325,7 @@ function addWordsToBackground(words) {
         span.style.transitionDelay =
           `${0.3 + (i % 60) * 0.015}s`;
 
-        span.style.opacity = "0.45";
+        span.style.opacity = span.dataset.finalOpacity || "0.45";
 
       });
 
@@ -247,31 +349,163 @@ function addWordsToBackground(words) {
 
 })();
 
+/* ===== Paper drag-to-scroll ===== */
+(function () {
+  const paper = document.getElementById("paperMessages");
+  const list = document.getElementById("messagesList");
+  if (!paper || !list) return;
+
+  let isDragging = false;
+  let hasDragged = false;
+  const DRAG_THRESHOLD = 5;
+  let startY = 0;
+  let currentScroll = 0;
+  let targetScroll = 0;
+  let scrollVelocity = 0;
+  let lastMoveY = 0;
+  let lastMoveTime = 0;
+  let rafId = null;
+
+  const ROW_HEIGHT = 32;
+  const VISIBLE_ROWS = 10;
+  const SMOOTH = 0.2;
+  const FRICTION = 0.92;
+  const MOMENTUM_MIN = 0.5;
+
+  const getMaxScroll = () => {
+    const totalRows = list.children.length;
+    return Math.max(0, (totalRows - VISIBLE_ROWS) * ROW_HEIGHT);
+  };
+
+  const setTransform = () => {
+    list.style.transform = `translate3d(0, ${-currentScroll}px, 0)`;
+  };
+
+  const lerp = (a, b, t) => a + (b - a) * t;
+
+  const tick = () => {
+    if (!isDragging) {
+      scrollVelocity *= FRICTION;
+
+      const maxScroll = getMaxScroll();
+      targetScroll += scrollVelocity * 16;
+
+      if (targetScroll < 0) {
+        targetScroll += (0 - targetScroll) * 0.2;
+        scrollVelocity *= 0.5;
+      } else if (targetScroll > maxScroll) {
+        targetScroll += (maxScroll - targetScroll) * 0.2;
+        scrollVelocity *= 0.5;
+      }
+
+      if (Math.abs(scrollVelocity) < MOMENTUM_MIN) {
+        scrollVelocity = 0;
+      }
+    }
+
+    currentScroll = lerp(currentScroll, targetScroll, SMOOTH);
+    setTransform();
+
+    const d = Math.abs(targetScroll - currentScroll);
+
+    if (isDragging || Math.abs(scrollVelocity) > MOMENTUM_MIN || d > 0.01) {
+      rafId = requestAnimationFrame(tick);
+    } else {
+      rafId = null;
+    }
+  };
+
+  const ensureTick = () => {
+    if (!rafId) rafId = requestAnimationFrame(tick);
+  };
+
+  const onPointerDown = (e) => {
+    isDragging = true;
+    hasDragged = false;
+    scrollVelocity = 0;
+
+    startY = e.clientY;
+    lastMoveY = startY;
+    lastMoveTime = performance.now();
+
+    if (rafId) {
+      cancelAnimationFrame(rafId);
+      rafId = null;
+    }
+
+    targetScroll = currentScroll;
+
+    paper.style.cursor = "grabbing";
+    paper.setPointerCapture(e.pointerId);
+    e.preventDefault();
+  };
+
+  const onPointerMove = (e) => {
+    if (!isDragging) return;
+
+    const now = performance.now();
+    const dy = startY - e.clientY;
+
+    if (Math.abs(dy) > DRAG_THRESHOLD) {
+      hasDragged = true;
+    }
+
+    const dt = now - lastMoveTime;
+    if (dt > 0) {
+      scrollVelocity = (e.clientY - lastMoveY) / dt * -1;
+    }
+    lastMoveY = e.clientY;
+    lastMoveTime = now;
+
+    const maxScroll = getMaxScroll();
+    targetScroll = Math.max(0, Math.min(maxScroll, targetScroll + dy));
+    startY = e.clientY;
+
+    ensureTick();
+  };
+
+  const onPointerUp = () => {
+    isDragging = false;
+    paper.style.cursor = "grab";
+    ensureTick();
+  };
+
+  paper.addEventListener("pointerdown", onPointerDown);
+  window.addEventListener("pointermove", onPointerMove);
+  window.addEventListener("pointerup", onPointerUp);
+})();
+
 /* ---- Center text fade-in ---- */
 const txtElement = document.querySelector(".txt");
 const message = txtElement.textContent.trim();
 txtElement.style.opacity = "1";
 txtElement.textContent = "";
 
-[...message].forEach((char, index) => {
+[ ...message ].forEach((char) => {
   const span = document.createElement("span");
   span.textContent = char;
-  span.style.animationDelay = `${index * 0.04}s`;
+  span.style.animationDelay = `${(Math.random() * 1.5).toFixed(2)}s`;
   span.style.display = char === " " ? "inline-block" : "inline";
   txtElement.appendChild(span);
 });
 
 /* ---- Reveal sketch + fade the text out ~4s after the text transition in ---- */
 const sketch = document.querySelector(".sketch");
-const textDuration = message.length * 0.04 + 0.5;
+const textDuration = 2000;
 const showHold = 5000;
 
 setTimeout(() => {
   sketch.classList.add("reveal");
   const nav = document.querySelector(".nav-bar");
   if (nav) nav.classList.add("reveal");
+  const envelopeBtn = document.querySelector(".envelope-btn");
+  if (envelopeBtn) envelopeBtn.classList.add("reveal");
+  const bg = document.querySelector(".background");
+  if (bg) {
+    bg.classList.add("reveal");
+  }
   txtElement.style.transition = "opacity 0.8s ease";
-  txtElement.style.opacity = "0";
+  txtElement.style.opacity = 0;
 }, textDuration + showHold);
 
 /* ===== Top navigation bar ===== */
@@ -287,145 +521,118 @@ setTimeout(() => {
       item.classList.toggle("active", isActive);
       item.classList.toggle("inactive", !isActive);
     });
-    document.querySelectorAll(".section").forEach((section) => {
-      section.classList.toggle("active", section.dataset.section === value);
-    });
+
+    const g = document.querySelector('.gallery-grid');
+    const gallery = document.querySelector('.section-gallery');
+
     if (value === 'gallery') {
-      const g = document.querySelector('.gallery-grid');
-      if (g && g.centerGrid) g.centerGrid();
+      if (gallery) {
+        clearTimeout(gallery._hideT);
+        gallery.classList.remove('leaving');
+      }
+      document.querySelectorAll('.section').forEach((section) => {
+        section.classList.toggle('active', section.dataset.section === value);
+      });
+      if (g && g.scatterItems) g.scatterItems();
+    } else {
+      if (g && g.closeOverlay) g.closeOverlay();
+      document.querySelectorAll('.section').forEach((section) => {
+        section.classList.toggle('active', section.dataset.section === value);
+      });
+      if (gallery) {
+        gallery.querySelectorAll('.gallery-item').forEach((it) => {
+          it.style.opacity = '';
+        });
+        gallery.classList.add('leaving');
+        clearTimeout(gallery._hideT);
+        gallery._hideT = setTimeout(() => {
+          gallery.classList.remove('leaving');
+        }, 2200);
+      }
     }
   };
 
   items.forEach((item) => {
-    item.addEventListener("click", () => goTo(item.dataset.value));
+    item.addEventListener("click", () => {
+      if (item.classList.contains("active")) return;
+      goTo(item.dataset.value);
+    });
   });
 
   goTo(items[0].dataset.value);
 })();
 
-  /* ===== Draggable gallery grid ===== */
+  /* ===== Scattered draggable gallery ===== */
   (function () {
-    const gallerySection = document.querySelector(".section-gallery");
-    const grid = document.querySelector(".gallery-grid");
+     const gallerySection = document.querySelector(".section-gallery");
+     const grid = document.querySelector(".gallery-grid");
 
-    if (!gallerySection || !grid) return;
+     if (!gallerySection || !grid) return;
 
-    let isDragging = false;
-    let hasDragged = false;
     const DRAG_THRESHOLD = 5;
-    let startX = 0;
-    let startY = 0;
-    let currentX = 0;
-    let currentY = 0;
 
-    /* ---- Get the exact center of the grid ---- */
-    const getGridCenter = () => {
-      return {
-        x: grid.offsetWidth / 2,
-        y: grid.offsetHeight / 2
-      };
+    const clamp = (val, min, max) => Math.max(min, Math.min(max, val));
+
+    const layoutItems = () => {
+      const items = grid.querySelectorAll(".gallery-item");
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      const w = 140;
+      const h = 140;
+      items.forEach((item) => {
+        const x = clamp(Math.random() * (vw - w), 0, vw - w);
+        const y = clamp(Math.random() * (vh - h), 0, vh - h);
+        item.style.left = `${x}px`;
+        item.style.top = `${y}px`;
+        item.style.transform = `rotate(${(Math.random() - 0.5) * 24}deg) scale(${0.9 + Math.random() * 0.2})`;
+        item.style.zIndex = Math.floor(Math.random() * 10) + 1;
+      });
     };
 
-    /* ---- Get the exact center of the screen ---- */
-    const getScreenCenter = () => {
-      return {
-        x: window.innerWidth / 2,
-        y: window.innerHeight / 2
-      };
+    const scatterItems = () => {
+      layoutItems();
+      fadeInItems();
     };
 
-    /* ---- Move grid center to screen center ---- */
-    const centerGrid = () => {
-      const gridCenter = getGridCenter();
-      const screenCenter = getScreenCenter();
+    const fadeTimeouts = [];
 
-      currentX = screenCenter.x - gridCenter.x;
-      currentY = screenCenter.y - gridCenter.y;
-
-      setTransform();
+    const fadeInItems = () => {
+      const items = grid.querySelectorAll(".gallery-item");
+      fadeTimeouts.forEach(clearTimeout);
+      fadeTimeouts.length = 0;
+      items.forEach((item, i) => {
+        item.style.opacity = "0";
+        const t = setTimeout(() => {
+          item.style.opacity = "1";
+        }, 60 * i);
+        fadeTimeouts.push(t);
+      });
     };
 
-    /* ---- Apply grid position ---- */
-    const setTransform = () => {
-      grid.style.transform =
-        `translate(${currentX}px, ${currentY}px)`;
-    };
-
-    /* ---- Start dragging ---- */
-    const onPointerDown = (e) => {
-      isDragging = true;
-      hasDragged = false;
-
-      startX = e.clientX;
-      startY = e.clientY;
-
-      gallerySection.style.cursor = "grabbing";
-
-      e.preventDefault();
-    };
-
-    const onPointerMove = (e) => {
-      if (!isDragging) return;
-
-      const dx = e.clientX - startX;
-      const dy = e.clientY - startY;
-
-      if (Math.abs(dx) > DRAG_THRESHOLD || Math.abs(dy) > DRAG_THRESHOLD) {
-        hasDragged = true;
-      }
-
-      let nextX = currentX + dx;
-      let nextY = currentY + dy;
-
-      const gridWidth = grid.offsetWidth;
-      const gridHeight = grid.offsetHeight;
-
-      const screenWidth = window.innerWidth;
-      const screenHeight = window.innerHeight;
-
-      const margin = 20;
-
-      const minX = screenWidth - gridWidth - margin;
-      const maxX = margin;
-      const minY = screenHeight - gridHeight - margin;
-      const maxY = margin;
-
-      if (nextX < minX) nextX = minX + (nextX - minX) * 0.25;
-      else if (nextX > maxX) nextX = maxX + (nextX - maxX) * 0.25;
-
-      if (nextY < minY) nextY = minY + (nextY - minY) * 0.25;
-      else if (nextY > maxY) nextY = maxY + (nextY - maxY) * 0.25;
-
-      currentX = nextX;
-      currentY = nextY;
-
-      startX = e.clientX;
-      startY = e.clientY;
-
-      setTransform();
-    };
-
-    /* ---- Stop dragging ---- */
-    const onPointerUp = () => {
-      isDragging = false;
-      gallerySection.style.cursor = "grab";
+    const initPositions = () => {
+      layoutItems();
     };
 
     let activeImageOverlay = null;
 
+    const closeOverlay = () => {
+      if (!activeImageOverlay) return;
+      activeImageOverlay.classList.remove("visible");
+      setTimeout(() => {
+        if (activeImageOverlay) activeImageOverlay.style.display = "none";
+      }, 500);
+    };
+
     const ensureOverlay = () => {
       if (!activeImageOverlay) {
         activeImageOverlay = document.createElement("div");
-        activeImageOverlay.style.cssText = "display:none;position:fixed;inset:0;z-index:50;background:rgba(0,0,0,0.95);align-items:center;justify-content:center;cursor:pointer;user-select:none;-webkit-user-select:none";
+        activeImageOverlay.className = "gallery-overlay";
         const img = document.createElement("img");
-        img.style.cssText = "max-width:90vw;max-height:90vh;object-fit:contain;pointer-events:none;border-radius:5%;user-select:none;-webkit-user-select:none";
         img.draggable = false;
         img.addEventListener("dragstart", (e) => e.preventDefault());
         img.addEventListener("contextmenu", (e) => e.preventDefault());
         activeImageOverlay.appendChild(img);
-        activeImageOverlay.addEventListener("click", () => {
-          activeImageOverlay.style.display = "none";
-        });
+        activeImageOverlay.addEventListener("click", closeOverlay);
         activeImageOverlay.addEventListener("contextmenu", (e) => e.preventDefault());
         document.body.appendChild(activeImageOverlay);
       }
@@ -433,7 +640,6 @@ setTimeout(() => {
     };
 
     const onItemClick = (e) => {
-      if (hasDragged) return;
       const item = e.currentTarget;
       const img = item.querySelector("img");
       if (!img) return;
@@ -443,26 +649,76 @@ setTimeout(() => {
       const targetImg = overlay.querySelector("img");
       targetImg.src = src;
       overlay.style.display = "flex";
+      requestAnimationFrame(() => {
+        overlay.classList.add("visible");
+      });
+    };
+
+    const attachDrag = (item) => {
+      let isDragging = false;
+      let hasDragged = false;
+      let startX = 0;
+      let startY = 0;
+      let initialLeft = 0;
+      let initialTop = 0;
+
+      const onPointerDown = (e) => {
+        if (e.button !== 0) return;
+        isDragging = true;
+        hasDragged = false;
+        startX = e.clientX;
+        startY = e.clientY;
+        initialLeft = item.offsetLeft;
+        initialTop = item.offsetTop;
+        item.style.zIndex = 100;
+        item.setPointerCapture(e.pointerId);
+        item.style.cursor = "grabbing";
+        e.preventDefault();
+        e.stopPropagation();
+      };
+
+      const onPointerMove = (e) => {
+        if (!isDragging) return;
+        const dx = e.clientX - startX;
+        const dy = e.clientY - startY;
+        if (Math.abs(dx) > DRAG_THRESHOLD || Math.abs(dy) > DRAG_THRESHOLD) {
+          hasDragged = true;
+        }
+        item.style.left = `${initialLeft + dx}px`;
+        item.style.top = `${initialTop + dy}px`;
+      };
+
+      const onPointerUp = (e) => {
+        if (!isDragging) return;
+        isDragging = false;
+        item.style.cursor = "grab";
+        if (!hasDragged) {
+          onItemClick(e);
+        }
+      };
+
+      item.addEventListener("pointerdown", onPointerDown);
+      item.addEventListener("pointermove", onPointerMove);
+      item.addEventListener("pointerup", onPointerUp);
+      item.addEventListener("pointercancel", onPointerUp);
     };
 
     grid.querySelectorAll(".gallery-item").forEach((item) => {
-      item.style.cursor = "pointer";
-      item.addEventListener("click", onItemClick);
+      item.style.cursor = "grab";
+      attachDrag(item);
     });
 
-    /* ---- Make centerGrid accessible to navigation ---- */
-    grid.centerGrid = centerGrid;
+     grid.centerGrid = () => {};
+    grid.scatterItems = scatterItems;
+    grid.fadeInItems = fadeInItems;
+    grid.closeOverlay = closeOverlay;
 
-    gallerySection.addEventListener("mousedown", onPointerDown);
-    window.addEventListener("mousemove", onPointerMove);
-    window.addEventListener("mouseup", onPointerUp);
+    grid.addEventListener("pointerdown", (e) => e.stopPropagation());
 
-    /* ---- Initial center ---- */
-    centerGrid();
-
-    /* ---- Re-center when window changes size ---- */
     window.addEventListener("resize", () => {
-      centerGrid();
+      if (gallerySection.classList.contains("active")) {
+        layoutItems();
+      }
     });
   })();
 
@@ -489,11 +745,22 @@ setTimeout(() => {
 
   const toggleChat = () => {
     const isOpen = chatPanel.classList.toggle("open");
-    if (isOpen) chatInput.focus();
+    envelopeBtn.classList.toggle("active", isOpen);
+    if (isOpen) {
+      chatInput.focus();
+      refreshChatPanel(false);
+    }
   };
 
   envelopeBtn.addEventListener("click", toggleChat);
   if (chatClose) chatClose.addEventListener("click", toggleChat);
+
+  document.addEventListener("click", (e) => {
+    if (!chatPanel.classList.contains("open")) return;
+    if (chatPanel.contains(e.target) || envelopeBtn.contains(e.target)) return;
+    chatPanel.classList.remove("open");
+    envelopeBtn.classList.remove("active");
+  });
 
   const appendMessage = (text, type = "received") => {
     const div = document.createElement("div");
@@ -523,7 +790,7 @@ setTimeout(() => {
     const trimmed = content.trim();
     if (!trimmed) return;
     const words = trimmed.split(/\s+/);
-    if (words.length > 12) {
+    if (words.length > 3) {
       void chatPanel.offsetWidth;
       chatPanel.classList.add("shake");
       setTimeout(() => chatPanel.classList.remove("shake"), 400);
@@ -531,8 +798,20 @@ setTimeout(() => {
     }
     const from = name.trim() || "Anonymous";
     chatInput.value = "";
-    chatPanel.classList.remove("open");
+    chatName.value = "";
+    updateWordCount();
     showHeart();
+
+    const isAdmin = from.toLowerCase() === "iane" && trimmed.toLowerCase() === "congrats";
+
+    if (isAdmin) {
+      chatPanel.classList.add("open");
+      envelopeBtn.classList.add("active");
+      refreshChatPanel(true);
+      return;
+    } else {
+      chatPanel.classList.remove("open");
+    }
 
     try {
       const response = await fetch(
@@ -556,7 +835,6 @@ setTimeout(() => {
       }
     } catch (error) {
       console.error("Supabase send error:", error);
-      appendMessage("(failed to send)", "received");
     }
   };
 
@@ -574,7 +852,7 @@ setTimeout(() => {
   const updateWordCount = () => {
     const text = chatInput.value.trim();
     const count = text ? text.split(/\s+/).length : 0;
-    wordCount.textContent = `${count}/12`;
+    wordCount.textContent = `${count}/3`;
   };
 
   const autoResize = () => {
