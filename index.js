@@ -39,9 +39,64 @@ async function fetchMessages() {
   }
 }
 
-fetchMessages().then((messages) => {
+let currentMessages = new Set();
+
+async function pollMessages() {
+  const messages = await fetchMessages();
+  const newMessages = [];
+  for (const msg of messages) {
+    if (!currentMessages.has(msg)) {
+      currentMessages.add(msg);
+      newMessages.push(msg);
+    }
+  }
+  if (newMessages.length) {
+    addWordsToBackground(newMessages);
+  }
+}
+
+function addWordsToBackground(words) {
+  const bg = document.querySelector(".background");
+  if (!bg) return;
+  const frag = document.createDocumentFragment();
+  const existingCount = bg.querySelectorAll(".bg-word").length;
+  const spans = [];
+  words.forEach((msg, i) => {
+    const span = document.createElement("span");
+    span.className = "bg-word";
+    const fontSize = Math.floor(14 + Math.random() * 36);
+    span.style.cssText = `
+      position:absolute;
+      left:${Math.random()*100}%;
+      top:${Math.random()*100}%;
+      color:#fff;
+      font-size:${fontSize}px;
+      opacity:0;
+      transition:opacity 0.3s ease;
+      white-space:normal;
+      max-width:300px;
+      overflow-wrap:anywhere;
+      word-break:break-word;
+    `;
+    span.textContent = msg;
+    frag.appendChild(span);
+    spans.push(span);
+  });
+  bg.appendChild(frag);
+  requestAnimationFrame(() => {
+    const allWords = bg.querySelectorAll(".bg-word");
+    for (let i = existingCount; i < allWords.length; i++) {
+      allWords[i].style.transitionDelay = `${0.3 + (i % 60) * 0.015}s`;
+      allWords[i].style.opacity = "0.45";
+    }
+  });
+}
+
+(async function init() {
+  const messages = await fetchMessages();
   if (!messages.length) return;
   const TEXT = messages;
+  messages.forEach(m => currentMessages.add(m));
 
   /* ---- Full-screen background text ---- */
   const bg = document.querySelector(".background");
@@ -77,14 +132,18 @@ fetchMessages().then((messages) => {
   }
   bg.appendChild(frag);
 
-  const allWords = bg.querySelectorAll(".bg-word");
-  allWords.forEach((span, i) => {
-    span.style.transitionDelay = `${0.3 + (i % 60) * 0.015}s`;
-    span.style.opacity = "0.45";
+  bg.classList.add("reveal");
+
+  requestAnimationFrame(() => {
+    const allWords = bg.querySelectorAll(".bg-word");
+    allWords.forEach((span, i) => {
+      span.style.transitionDelay = `${0.3 + (i % 60) * 0.015}s`;
+      span.style.opacity = "0.45";
+    });
   });
 
-  bg.classList.add("reveal");
-});
+  setInterval(pollMessages, 1000);
+})();
 
 /* ---- Center text fade-in ---- */
 const txtElement = document.querySelector(".txt");
