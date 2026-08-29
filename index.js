@@ -1,12 +1,21 @@
 /* ===== Supabase Connection ===== */
+/* ===== Supabase Connection ===== */
 
 const SUPABASE_URL = "https://rvyrpzuvwapwxpobicfb.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ2eXJwenV2d2Fwd3hwb2JpY2ZiIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4NzkyMjI3MSwiZXhwIjoyMTAzNDk4MjcxfQ.vql1Gr2HQYV70hkByl8BCTdxszoQDP4mPD86XMfRQCI";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ2eXJwenV2d2Fwd3hwb2JpY2ZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc5MjIyNzEsImV4cCI6MjEwMzQ5ODI3MX0.9dysuEyVyc-jL27bSQs9YibqeuUqlUb2VyQrL2L4QWQ";
+
+
+/* ===== Last processed database ID ===== */
+
+let lastMessageId = 0;
+
+
+/* ===== Fetch initial messages ===== */
 
 async function fetchMessages() {
   try {
     const response = await fetch(
-      `${SUPABASE_URL}/rest/v1/messages?select=message`,
+      `${SUPABASE_URL}/rest/v1/messages?select=id,message&order=id.asc`,
       {
         method: "GET",
         headers: {
@@ -23,52 +32,92 @@ async function fetchMessages() {
     }
 
     const data = await response.json();
-    const seen = new Set();
-    const messages = [];
-    for (const row of data) {
-      const msg = row.message;
-      if (msg && !seen.has(msg)) {
-        seen.add(msg);
-        messages.push(msg);
-      }
-    }
-    return messages;
+
+    return data;
+
   } catch (error) {
     console.error("Supabase fetch error:", error);
     return [];
   }
 }
 
-let currentMessages = new Set();
+
+/* ===== Check for new rows ===== */
 
 async function pollMessages() {
-  const messages = await fetchMessages();
-  const newMessages = [];
-  for (const msg of messages) {
-    if (!currentMessages.has(msg)) {
-      currentMessages.add(msg);
-      newMessages.push(msg);
+  try {
+    const response = await fetch(
+      `${SUPABASE_URL}/rest/v1/messages?select=id,message&order=id.asc&id=gt.${lastMessageId}`,
+      {
+        method: "GET",
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+          "Content-Type": "application/json"
+        }
+      }
+    );
+
+    if (!response.ok) {
+      console.error("Supabase polling failed:", response.status);
+      return;
     }
-  }
-  if (newMessages.length) {
-    addWordsToBackground(newMessages);
+
+    const data = await response.json();
+
+    if (!data.length) return;
+
+    /* ---- Add every new database row ---- */
+
+    const newMessages = [];
+
+    data.forEach((row) => {
+      if (row.message) {
+        newMessages.push(row.message);
+      }
+
+      /* ---- Remember the newest ID ---- */
+
+      if (Number(row.id) > lastMessageId) {
+        lastMessageId = Number(row.id);
+      }
+    });
+
+    if (newMessages.length) {
+      addWordsToBackground(newMessages);
+    }
+
+  } catch (error) {
+    console.error("Supabase polling error:", error);
   }
 }
+
+
+/* ===== Add messages to background ===== */
 
 function addWordsToBackground(words) {
   const bg = document.querySelector(".background");
+
   if (!bg) return;
+
   const frag = document.createDocumentFragment();
-  const existingCount = bg.querySelectorAll(".bg-word").length;
-  const spans = [];
-  words.forEach((msg, i) => {
+
+  const existingCount =
+    bg.querySelectorAll(".bg-word").length;
+
+  words.forEach((msg) => {
+
     const span = document.createElement("span");
+
     span.className = "bg-word";
-    const fontSize = Math.floor(14 + Math.random() * 36);
+
+    const fontSize =
+      Math.floor(14 + Math.random() * 36);
+
     span.style.cssText = `
       position:absolute;
-      left:${Math.random()*100}%;
-      top:${Math.random()*100}%;
+      left:${Math.random() * 100}%;
+      top:${Math.random() * 100}%;
       color:#fff;
       font-size:${fontSize}px;
       opacity:0;
@@ -78,71 +127,124 @@ function addWordsToBackground(words) {
       overflow-wrap:anywhere;
       word-break:break-word;
     `;
+
     span.textContent = msg;
+
     frag.appendChild(span);
-    spans.push(span);
   });
+
   bg.appendChild(frag);
+
   requestAnimationFrame(() => {
-    const allWords = bg.querySelectorAll(".bg-word");
-    for (let i = existingCount; i < allWords.length; i++) {
-      allWords[i].style.transitionDelay = `${0.3 + (i % 60) * 0.015}s`;
+
+    const allWords =
+      bg.querySelectorAll(".bg-word");
+
+    for (
+      let i = existingCount;
+      i < allWords.length;
+      i++
+    ) {
+
+      allWords[i].style.transitionDelay =
+        `${0.3 + (i % 60) * 0.015}s`;
+
       allWords[i].style.opacity = "0.45";
     }
+
   });
 }
 
+
+/* ===== Initial load ===== */
+
 (async function init() {
+
   const messages = await fetchMessages();
-  if (!messages.length) return;
-  const TEXT = messages;
-  messages.forEach(m => currentMessages.add(m));
 
-  /* ---- Full-screen background text ---- */
-  const bg = document.querySelector(".background");
-  const secretWordIndex = Math.floor(Math.random() * TEXT.length);
-  let msgCount = 0;
+  /* ---- Display existing messages ---- */
 
-  const frag = document.createDocumentFragment();
-  const totalItems = TEXT.length;
-  for (let i = 0; i < totalItems; i++) {
-    const msg = TEXT[i];
-    const span = document.createElement("span");
-    const isSecret = i === secretWordIndex;
-    const fontSize = Math.floor(14 + Math.random() * 36);
+  if (messages.length) {
 
-    span.className = "bg-word";
+    const bg = document.querySelector(".background");
 
-    span.style.cssText = `
-      position:absolute;
-      left:${Math.random()*100}%;
-      top:${Math.random()*100}%;
-      color:#fff;
-      font-size:${fontSize}px;
-      opacity:0;
-      transition:opacity 0.3s ease;
-      white-space:normal;
-      max-width:300px;
-      overflow-wrap:anywhere;
-      word-break:break-word;
-    `;
+    const frag = document.createDocumentFragment();
 
-    span.textContent = msg;
-    frag.appendChild(span);
-  }
-  bg.appendChild(frag);
+    messages.forEach((row) => {
 
-  bg.classList.add("reveal");
+      const msg = row.message;
 
-  requestAnimationFrame(() => {
-    const allWords = bg.querySelectorAll(".bg-word");
-    allWords.forEach((span, i) => {
-      span.style.transitionDelay = `${0.3 + (i % 60) * 0.015}s`;
-      span.style.opacity = "0.45";
+      if (!msg) return;
+
+      const span = document.createElement("span");
+
+      const fontSize =
+        Math.floor(14 + Math.random() * 36);
+
+      span.className = "bg-word";
+
+      span.style.cssText = `
+        position:absolute;
+        left:${Math.random() * 100}%;
+        top:${Math.random() * 100}%;
+        color:#fff;
+        font-size:${fontSize}px;
+        opacity:0;
+        transition:opacity 0.3s ease;
+        white-space:normal;
+        max-width:300px;
+        overflow-wrap:anywhere;
+        word-break:break-word;
+      `;
+
+      span.textContent = msg;
+
+      frag.appendChild(span);
+
+      /* ---- Remember newest ID ---- */
+
+      if (Number(row.id) > lastMessageId) {
+        lastMessageId = Number(row.id);
+      }
+
     });
-  });
 
-  setInterval(pollMessages, 1000);
+    bg.appendChild(frag);
+
+    bg.classList.add("reveal");
+
+    requestAnimationFrame(() => {
+
+      const allWords =
+        bg.querySelectorAll(".bg-word");
+
+      allWords.forEach((span, i) => {
+
+        span.style.transitionDelay =
+          `${0.3 + (i % 60) * 0.015}s`;
+
+        span.style.opacity = "0.45";
+
+      });
+
+    });
+
+  } else {
+
+    /* ---- Still reveal background if database is empty ---- */
+
+    const bg = document.querySelector(".background");
+
+    if (bg) {
+      bg.classList.add("reveal");
+    }
+
+  }
+
+  /* ===== Check database every 5 seconds ===== */
+
+  setInterval(pollMessages, 5000);
+
 })();
 
 /* ---- Center text fade-in ---- */
