@@ -1345,7 +1345,9 @@ function showHeart() {
       removeBtn.className = "upload-file-item-remove";
       removeBtn.innerHTML = "&times;";
       removeBtn.setAttribute("aria-label", `Remove ${file.name}`);
-      removeBtn.addEventListener("click", () => {
+      removeBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
         selectedFiles.splice(index, 1);
         renderFileList();
         updateUploadCount();
