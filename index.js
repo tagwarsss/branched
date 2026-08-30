@@ -9,6 +9,10 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 let lastMessageId = 0;
 
+/* ===== Intro text still animating/transitioning? ===== */
+
+let introComplete = false;
+
 
 /* ===== Fetch initial messages ===== */
 
@@ -514,6 +518,11 @@ setTimeout(() => {
   }
   txtElement.style.transition = "opacity 0.8s ease";
   txtElement.style.opacity = 0;
+
+  /* ---- Allow "iane" keyboard listeners only after the intro text finishes ---- */
+  setTimeout(() => {
+    introComplete = true;
+  }, 800);
 }, textDuration + showHold);
 
 /* ===== Top navigation bar ===== */
@@ -1476,6 +1485,8 @@ function showHeart() {
   };
 
   document.addEventListener("keydown", (e) => {
+    if (!introComplete) return;
+
     if (document.activeElement && ["INPUT", "TEXTAREA"].includes(document.activeElement.tagName)) {
       return;
     }
@@ -1523,6 +1534,8 @@ function showHeart() {
   };
 
   document.addEventListener("keydown", (e) => {
+    if (!introComplete) return;
+
     if (document.activeElement && ["INPUT", "TEXTAREA"].includes(document.activeElement.tagName)) {
       return;
     }
