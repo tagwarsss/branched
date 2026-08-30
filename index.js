@@ -11,7 +11,15 @@ let lastMessageId = 0;
 
 /* ===== Intro text still animating/transitioning? ===== */
 
+let initialLoadComplete = false;
+let txtIntroDone = false;
 let introComplete = false;
+
+function maybeEnableListening() {
+  if (initialLoadComplete && txtIntroDone) {
+    introComplete = true;
+  }
+}
 
 
 /* ===== Fetch initial messages ===== */
@@ -359,6 +367,11 @@ function renderMessagesList(messages) {
 
   setInterval(pollMessages, 5000);
 
+  /* ---- Initial load finished ---- */
+
+  initialLoadComplete = true;
+  maybeEnableListening();
+
 })();
 
 /* ===== Paper drag-to-scroll ===== */
@@ -521,7 +534,8 @@ setTimeout(() => {
 
   /* ---- Allow "iane" keyboard listeners only after the intro text finishes ---- */
   setTimeout(() => {
-    introComplete = true;
+    txtIntroDone = true;
+    maybeEnableListening();
   }, 800);
 }, textDuration + showHold);
 
