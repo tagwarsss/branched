@@ -578,11 +578,13 @@ setTimeout(() => {
         g.fadeInItems();
       }
     } else {
-      if (g && g.closeOverlay) g.closeOverlay();
-      document.querySelectorAll('.section').forEach((section) => {
-        section.classList.toggle('active', section.dataset.section === value);
-      });
-      if (gallery) {
+       if (g && g.closeOverlay) g.closeOverlay();
+       document.querySelectorAll('.section').forEach((section) => {
+         section.classList.toggle('active', section.dataset.section === value);
+       });
+       const trashcan = document.getElementById("trashcan");
+       if (trashcan) trashcan.classList.remove("visible");
+       if (gallery) {
         gallery.querySelectorAll('.gallery-item').forEach((it) => {
           it.style.opacity = '';
         });
