@@ -4,6 +4,15 @@
 const SUPABASE_URL = "https://rvyrpzuvwapwxpobicfb.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ2eXJwenV2d2Fwd3hwb2JpY2ZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc5MjIyNzEsImV4cCI6MjEwMzQ5ODI3MX0.9dysuEyVyc-jL27bSQs9YibqeuUqlUb2VyQrL2L4QWQ";
 
+/* ===== Mobile detection ===== */
+(function () {
+  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768;
+  if (isMobile) {
+    const overlay = document.getElementById("mobileOverlay");
+    if (overlay) overlay.classList.add("visible");
+  }
+})();
+
 
 /* ===== Last processed database ID ===== */
 

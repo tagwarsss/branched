@@ -107,6 +107,7 @@ body {
   line-height: 1.4;
   font-family: "Stampwriter Kit", cursive;
   color: #fff;
+  background: #000;
   opacity: 0;
   pointer-events: none;
   transition: opacity 3.5s ease 0.3s, filter 0.5s ease;
@@ -1208,5 +1209,41 @@ body:has(.nav-item.active[data-value="gallery"]) .sketch {
 @keyframes typingPulse {
   0%, 100% { opacity: 0.5; transform: scale(0.98); }
   50% { opacity: 1; transform: scale(1); }
+}
+
+/* ===== Mobile Overlay ===== */
+.mobile-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: #000;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 24px;
+}
+.mobile-overlay.visible {
+  display: flex;
+}
+.mobile-overlay-content {
+  color: #fff;
+  font-family: "Special Elite", cursive;
+}
+.mobile-overlay-icon {
+  width: 64px;
+  height: 64px;
+  margin-bottom: 24px;
+  opacity: 0.8;
+}
+.mobile-overlay h2 {
+  font-size: 24px;
+  margin: 0 0 12px;
+  font-weight: normal;
+}
+.mobile-overlay p {
+  font-size: 16px;
+  opacity: 0.7;
+  margin: 0;
 }
 
